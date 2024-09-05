@@ -38,12 +38,13 @@ async def main():
                         choices=["xhs", "dy", "ks", "bili", "wb", "jrtt"], default=config.PLATFORM)
     parser.add_argument('--lt', type=str, help='Login type (qrcode | phone | cookie)',
                         choices=["qrcode", "phone", "cookie"], default=config.LOGIN_TYPE)
-    parser.add_argument('--type', type=str, help='crawler type (search | detail | creator)',
-                        choices=["search", "detail", "creator"], default=config.CRAWLER_TYPE)
+    parser.add_argument('--type', type=str, help='crawler type (search | detail | creator | all)',
+                        choices=["search", "detail", "creator", "all"], default=config.CRAWLER_TYPE)
 
     # init db
     if config.SAVE_DATA_OPTION == "db":
-        await db.init_db()
+        # await db.init_db()
+        await db.init()
 
     args = parser.parse_args()
     crawler = CrawlerFactory.create_crawler(platform=args.platform)

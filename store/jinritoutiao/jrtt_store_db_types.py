@@ -10,23 +10,27 @@ from tortoise import fields
 from tortoise.models import Model
 
 
-class JinritoutiaoBaseModel(Model):
+class JinritoutiaoIDModel(Model):
     id = fields.IntField(pk=True, autoincrement=True, description="自增ID")
-    user_id = fields.CharField(null=True, max_length=64, description="user id")
-    nickname = fields.CharField(null=True, max_length=64, description="nickname")
-    avatar = fields.CharField(null=True, max_length=255, description="touxiang")
-    gender = fields.CharField(null=True, max_length=12, description="gender")
-    profile_url = fields.CharField(null=True, max_length=255, description="user homepage")
-    ip_location = fields.CharField(null=True, max_length=32, description="user location")
+    note_id = fields.CharField(null=False, max_length=20, description="note guid")
+    class Meta:
+        table = "NoteID"
+        table_description = "store all the notes id in NoteID"
+
+
+class JinritoutiaoBaseModel(Model):
+    note_id = fields.CharField(null=False, max_length=20, description="note guid")
+    user_id = fields.CharField(null=False, max_length=20, description="user guid")
+    user_name = fields.CharField(null=False, max_length=30, description="user name")
+    ip_location = fields.CharField(null=True, max_length=10, description="user ip location")
     add_ts = fields.BigIntField(description="timestamp")
-    last_modify_ts = fields.BigIntField(description="last modify timestamp")
+    create_time = fields.BigIntField(description="comment timestamp", index=True)  # 评论时间戳
 
     class Meta:
         abstract = True
 
 
-class JinritoutiaoNote(JinritoutiaoBaseModel):
-    note_id = fields.CharField(max_length=64, index=True, description="note id")  # 帖子ID
+class JinritoutiaoNoteModel(JinritoutiaoBaseModel):
     content = fields.TextField(null=True, description="note content")  # 帖子正文内容
     create_time = fields.BigIntField(description="note timestamp", index=True)  # 帖子发布时间戳
     create_data_time = fields.CharField(max_length=32, description="note date", index=True)  # 帖子发布日期 index 可能是按某种顺序存储？
@@ -43,13 +47,11 @@ class JinritoutiaoNote(JinritoutiaoBaseModel):
         return f"{self.note_id}"
 
 
-class JinritoutiaoComment(JinritoutiaoBaseModel):
-    note_id = fields.CharField(max_length=64, index=True, description="note id")  # 帖子id  index设置为True时，将为该字段创建数据库索引，这有助于加快查询速度
-    comment_id = fields.CharField(max_length=64, index=True, description="comment id")  # 评论id
-    user_id = fields.CharField(max_length=64, description="user id")
-    user_name = fields.TextField(null=False, description="user name")
-    content = fields.TextField(null=True, description="comment content")  # 评论内容
-    create_time = fields.BigIntField(description="comment timestamp")  # 评论时间戳
+class JinritoutiaoCommentModel(JinritoutiaoBaseModel):
+    comment_id = fields.CharField(null=False, pk=True, max_length=20, index=True, description="comment guid")  # 评论id
+    text = fields.TextField(null=False, description="comment content")  # 评论内容
+    reply_count = fields.IntField(null=True, description="account for replying this comment")
+    create_time = fields.BigIntField(description="comment timestamp", index=True)  # 评论时间戳
     # create_data_time = fields.CharField(max_length=32, description="comment date", index=True)  # 评论日期 index 可能是按某种顺序存储？
     # comment_like_count = fields.CharField(max_length=16, description="like count")  # 评论点赞数
     # sub_comment_count = fields.CharField(max_length=16, description="sub comment count")  # 评论回复数
@@ -62,14 +64,12 @@ class JinritoutiaoComment(JinritoutiaoBaseModel):
         return f"{self.comment_id}"
 
 
-class JinritoutiaoReply(JinritoutiaoBaseModel):
-    note_id = fields.CharField(max_length=64, index=True, description="note id")
-    comment_id = fields.CharField(max_length=64, index=True, description="comment id")
-    reply_id = fields.CharField(max_length=64, index=True, description="reply id")
-    user_id = fields.CharField(max_length=64, description="user id")
-    user_name = fields.TextField(null=False, description="user name")
-    content = fields.TextField(null=True, description="reply content")
-    create_time = fields.BigIntField(description="reply timestamp")
+class JinritoutiaoReplyModel(JinritoutiaoBaseModel):
+    reply_id = fields.CharField(null=False, pk=True, max_length=20, index=True, description="reply guid")
+    comment_id = fields.CharField(null=False, max_length=20, index=True, description="comment guid")  # 评论id
+    text = fields.TextField(null=False, description="reply content")  # 评论内容
+    to_reply = fields.BooleanField(null=False, description="a reply to comment or reply, false is reply to comment")
+    to_reply_id = fields.CharField(null=True, max_length=20, index=True, description="reply to a reply id if to_reply is true")
 
     class Meta:
         table = "jinritoutiao_note_comment_reply"

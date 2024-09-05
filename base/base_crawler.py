@@ -50,8 +50,15 @@ class AbstractStore(ABC):
     async def store_comment(self, comment_item: Dict):
         pass
 
+    @abstractmethod
+    async def store_reply(self, reply_item: Dict):
+        pass
     # TODO support all platform
     # only xhs is supported, so @abstractmethod is commented
     # @abstractmethod
     async def store_creator(self, creator: Dict):
+        pass
+
+    @abstractmethod
+    async def fetch_column(self, column_name):
         pass

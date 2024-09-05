@@ -6,9 +6,10 @@ Email: yangguanqunit@outlook.com
 '''
 import csv
 import pathlib
-from typing import Dict
+from typing import Dict, List
 
 import aiofiles
+import tortoise.exceptions
 
 from base.base_crawler import AbstractStore
 from tools import utils
@@ -80,50 +81,75 @@ class JinritoutiaoDbStoreImplement(AbstractStore):
         Returns:
 
         """
-        from .jrtt_store_db_types import JinritoutiaoNote
+        from .jrtt_store_db_types import JinritoutiaoNoteModel
         note_id = content_item.get("note_id")
-        if not await JinritoutiaoNote.filter(note_id=note_id).exists():
+        if not await JinritoutiaoNoteModel.filter(note_id=note_id).exists():
             content_item["add_ts"] = utils.get_current_timestamp()
-            jinritoutiao_note_pydantic = pydantic_model_creator(JinritoutiaoNote, name="JinritoutiaoNoteCreate", exclude=('id',))
+            jinritoutiao_note_pydantic = pydantic_model_creator(JinritoutiaoNoteModel, name="JinritoutiaoNoteCreate", exclude=('id',))
             jinritoutiao_data = jinritoutiao_note_pydantic(**content_item)
             jinritoutiao_note_pydantic.model_validate(jinritoutiao_data)
-            await JinritoutiaoNote.create(**jinritoutiao_data.model_dump())
+            await JinritoutiaoNoteModel.create(**jinritoutiao_data.model_dump())
         else:
-            jinritoutiao_note_pydantic = pydantic_model_creator(JinritoutiaoNote, name="JinritoutiaoNoteUpdate",
+            jinritoutiao_note_pydantic = pydantic_model_creator(JinritoutiaoNoteModel, name="JinritoutiaoNoteUpdate",
                                                                 exclude=('id', 'add_ts'))
             jinritoutiao_data = jinritoutiao_note_pydantic(**content_item)
             jinritoutiao_note_pydantic.model_validate(jinritoutiao_data)
-            await JinritoutiaoNote.filter(note_id=note_id).update(**jinritoutiao_data.model_dump())
+            await JinritoutiaoNoteModel.filter(note_id=note_id).update(**jinritoutiao_data.model_dump())
 
-    async def store_comment(self, comment_item: Dict):
+    async def store_comment(self, comment_item):
         """
         Jinritoutiao content DB storage implementation
         Args:
-            comment_item: comment item dict
+            comment_item_list: comment item dict
 
         Returns:
 
         """
-        from .jrtt_store_db_types import JinritoutiaoComment
+        from .jrtt_store_db_types import JinritoutiaoCommentModel
+
         comment_id = comment_item.get("comment_id", "")
         assert comment_id != "", "[Error] comment id is None..."
-        if not await JinritoutiaoComment.filter(comment_id=comment_id).exists():
+        if not await JinritoutiaoCommentModel.filter(comment_id=comment_id).exists():
             comment_item["add_ts"] = utils.get_current_timestamp()
-            comment_pydantic = pydantic_model_creator(JinritoutiaoComment, name="JinrotoutiaoNoteCommentCreate",
+            comment_pydantic = pydantic_model_creator(JinritoutiaoCommentModel, name="JinrotoutiaoNoteCommentCreate",
                                                       exclude=('id',))  # pydantic 库是 python 中用于数据接口定义检查与设置管理的库
             comment_data = comment_pydantic(**comment_item)
             comment_pydantic.model_validate(comment_data)
-            await JinritoutiaoComment.create(**comment_data.model_dump())
+            await JinritoutiaoCommentModel.create(**comment_data.model_dump())
         else:
-            comment_pydantic = pydantic_model_creator(JinritoutiaoComment, name="JinritoutiaoNoteCommentUpdate",
-                                                      exclude=('id', 'add_ts'))
+            comment_pydantic = pydantic_model_creator(JinritoutiaoCommentModel, name="JinritoutiaoNoteCommentUpdate",
+                                                      exclude=('comment_id', 'add_ts'))
+            comment_item.pop("comment_id")
             comment_data = comment_pydantic(**comment_item)
             comment_pydantic.model_validate(comment_data)
-            await JinritoutiaoComment.filter(comment_id=comment_id).update(**comment_data.model_dump())
+            await JinritoutiaoCommentModel.filter(comment_id=comment_id).update(**comment_data.model_dump())
 
     async def store_reply(self, reply_item: Dict):
 
-        from .jrtt_store_db_types import JinritoutiaoReply
+        from .jrtt_store_db_types import JinritoutiaoReplyModel
+
         reply_id = reply_item.get("reply_id", "")
         assert reply_id != "", "[Error] reply id is None..."
-        pass
+        if not await JinritoutiaoReplyModel.filter(reply_id=reply_id).exists():
+            reply_item["add_ts"] = utils.get_current_timestamp()
+            reply_pydantic = pydantic_model_creator(JinritoutiaoReplyModel, name="JinrotoutiaoCommentReplyCreate",
+                                                      exclude=('id',))  # pydantic 库是 python 中用于数据接口定义检查与设置管理的库
+            reply_data = reply_pydantic(**reply_item)
+            reply_pydantic.model_validate(reply_data)
+            await JinritoutiaoReplyModel.create(**reply_data.model_dump())
+        else:
+            reply_pydantic = pydantic_model_creator(JinritoutiaoReplyModel, name="JinrotoutiaoCommentReplyUpdate",
+                                                      exclude=('reply_id', 'add_ts'))
+            reply_item.pop("reply_id")
+            reply_data = reply_pydantic(**reply_item)
+            reply_pydantic.model_validate(reply_data)
+            await JinritoutiaoReplyModel.filter(reply_id=reply_id).update(**reply_data.model_dump())
+
+    async def fetch_column(self, column_name) -> List[str]:
+        from .jrtt_store_db_types import JinritoutiaoIDModel
+        note_id_models = await JinritoutiaoIDModel.all().only(f"{column_name}")
+        note_ids = []
+        for id_ in note_id_models:
+            note_ids.append(id_.note_id)
+
+        return note_ids

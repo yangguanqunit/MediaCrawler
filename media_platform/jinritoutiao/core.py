@@ -98,8 +98,10 @@ class JinritoutiaoCrawler(AbstractCrawler):
             elif self.crawler_type == "detail":
                 # Get the information and comments of the specified post
                 await self.get_specified_notes()
-            else:
-                pass
+            elif self.crawler_type == "all":
+                # await  self.get_specified_notes()
+                await self.crawling_all()
+
             utils.logger.info("[Jinritoutiao.start] Jinritoutiao Crawler finished")
 
     async def search(self):
@@ -126,21 +128,28 @@ class JinritoutiaoCrawler(AbstractCrawler):
         #         page += 1
         #         await self
 
+    async def crawling_all(self):
+        note_ids = await jrtt_store.get_jinritoutiao_note_id()
+        config.JRTT_SPECIFIED_ID_LIST = note_ids
+        await self.get_specified_notes()
+
 
     async def get_specified_notes(self):
         """
         get specified notes info
         :return:
         """
-        semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
-        task_list = [
-            self.get_note_info_task(note_id=note_id, semaphore=semaphore) for note_id in
-            config.JRTT_SPECIFIED_ID_LIST
-        ]
-        note_details = await asyncio.gather(*task_list)
-        for note_item in note_details:
-            if note_item:
-                await jrtt_store.update_jinritoutiao_note(note_item)
+        # not crawl note content in this func for now
+        # semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
+        # task_list = [
+        #     await self.get_note_info_task(note_id=note_id, semaphore=semaphore) for note_id in
+        #     config.JRTT_SPECIFIED_ID_LIST
+        # ]
+        # note_details = await asyncio.gather(*task_list)
+        # for note_item in note_details:
+        #     if note_item:
+        #         await jrtt_store.update_jinritoutiao_note(note_item)
+
         await self.batch_get_notes_comments(config.JRTT_SPECIFIED_ID_LIST)
 
     async def get_note_info_task(self, note_id: str, semaphore: asyncio.Semaphore):
@@ -170,7 +179,9 @@ class JinritoutiaoCrawler(AbstractCrawler):
         semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
         task_list: List[Task] = []
         for note_id in note_id_list:
-            task = asyncio.create_task(self.get_note)
+            task = asyncio.create_task(self.get_note_comments(note_id, semaphore))
+            task_list.append(task)
+        await asyncio.gather(*task_list)
 
     async def get_note_comments(self, note_id: str, semaphore: asyncio.Semaphore):
         """
@@ -184,8 +195,9 @@ class JinritoutiaoCrawler(AbstractCrawler):
                 utils.logger.info(f"[JinritoutiaoCrawler.get_note_comments] begin get note_id: {note_id} comments ...")
                 await self.jrtt_client.get_note_all_comments(
                     note_id=note_id,
-                    crawl_interval=random.randint(1, 10),
-                    callback=jrtt_store.batch_update_jinritoutiao_note_comments
+                    max_interval=3,
+                    callback_comment=jrtt_store.batch_update_jinritoutiao_note_comments,
+                    callback_reply=jrtt_store.batch_update_jinritoutiao_comment_replies
                 )
             except DataFetchError as ex:
                 utils.logger.error(f"[JinritoutiaoCrawler.get_note_info_task] Get note detail error: {ex}")

@@ -7,7 +7,7 @@ from tools import utils
 
 
 def get_platform_models() -> List[str]:
-    models = ["store.xhs", "store.douyin", "store.bilibili", "store.kuaishou", "store.weibo"]
+    models = ["store.xhs", "store.douyin", "store.bilibili", "store.kuaishou", "store.weibo", "store.jinritoutiao"]
     return models
 
 
@@ -22,7 +22,7 @@ async def close() -> None:
     await Tortoise.close_connections()
 
 async def init():
-    await init_db(create_db=True)
+    await init_db(create_db=False)
     await Tortoise.generate_schemas()
     utils.logger.info("[db.init] Init DB Success!")
 
