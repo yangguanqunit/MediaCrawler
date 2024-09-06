@@ -221,6 +221,8 @@ class JrttClient:
             utils.logger.error(f"connection timeout when visit {uri} in reply")
             return []
         replies_data = replies['data']['data']
+        if not replies_data:
+            return []
         return replies_data
 
     async def get_note_info_by_id(self, note_id: str) -> Dict:
