@@ -146,10 +146,9 @@ class JinritoutiaoDbStoreImplement(AbstractStore):
             await JinritoutiaoReplyModel.filter(reply_id=reply_id).update(**reply_data.model_dump())
 
     async def fetch_column(self, column_name) -> List[str]:
-        from .jrtt_store_db_types import JinritoutiaoIDModel
-        note_id_models = await JinritoutiaoIDModel.all().only(f"{column_name}")
-        note_ids = []
-        for id_ in note_id_models:
-            note_ids.append(id_.note_id)
+        from .jrtt_store_db_types import JinritoutiaoIDModel, JinritoutiaoCommentModel
+        note_id_id_model = await JinritoutiaoIDModel.all().distinct().values_list(column_name, flat=True)
+        note_id_comment_model = await JinritoutiaoCommentModel.all().distinct().values_list(column_name, flat=True)
+        note_ids = list(set(note_id_id_model) - (set(note_id_comment_model)))
 
         return note_ids

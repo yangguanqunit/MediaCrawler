@@ -5,8 +5,6 @@ File Create By Author: Yang Guanqun
 Email: yangguanqunit@outlook.com
 '''
 
-from typing import List
-
 import config
 
 from .jrtt_store_db_types import *
